@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Students</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+  <h1>Students</h1>
+  <button id="logout">Logout</button>
+
+  <form id="studentForm">
+    <input type="hidden" id="studentId" />
+    <input type="text" id="name" placeholder="Name" required />
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="number" id="age" placeholder="Age" required />
+    <button type="submit">Save</button>
+  </form>
+
+  <h2>List of Students</h2>
+  <ul id="studentList"></ul>
+
+  <script>
+    function fetchStudents() {
+      const token = localStorage.getItem('token');
+      $.ajax({
+        url: '/api/students',
+        method: 'GET',
+        headers: { 'Authorization': token },
+        success: function(response) {
+          $('#studentList').empty();
+          response.forEach(student => {
+            $('#studentList').append(`
+              <li>
+                ${student.name} - ${student.email} - ${student.age}
+                <button onclick="editStudent('${student._id}')">Edit</button>
+                <button onclick="deleteStudent('${student._id}')">Delete</button>
+              </li>
+            `);
+          });
+        },
+        error: function(err) {
+          alert('Failed to fetch students');
+        }
+      });
+    }
+
+    $('#studentForm').on('submit', function(e) {
+      e.preventDefault();
+      const token = localStorage.getItem('token');
+      const studentId = $('#studentId').val();
+      const name = $('#name').val();
+      const email = $('#email').val();
+      const age = $('#age').val();
+
+      const studentData = { name, email, age };
+      if (studentId) {
+        $.ajax({
+          url: `/api/students/${studentId}`,
+          method: 'PUT',
+          headers: { 'Authorization': token },
+          contentType: 'application/json',
+          data: JSON.stringify(studentData),
+          success: function() {
+            fetchStudents();
+            $('#studentForm')[0].reset();
+          }
+        });
+      } else {
+        $.ajax({
+          url: '/api/students',
+          method: 'POST',
+          headers: { 'Authorization': token },
+          contentType: 'application/json',
+          data: JSON.stringify(studentData),
+          success: function() {
+            fetchStudents();
+            $('#studentForm')[0].reset();
+          }
+        });
+      }
+    });
+
+    function editStudent(id) {
+      const token = localStorage.getItem('token');
+      $.ajax({
+        url: `/api/students/${id}`,
+        method: 'GET',
+        headers: { 'Authorization': token },
+        success: function(student) {
+          $('#studentId').val(student._id);
+          $('#name').val(student.name);
+          $('#email').val(student.email);
+          $('#age').val(student.age);
+        },
+        error: function() {
+          alert('Failed to fetch student details');
+        }
+      });
+    }
+
+    function deleteStudent(id) {
+      const token = localStorage.getItem('token');
+      $.ajax({
+        url: `/api/students/${id}`,
+        method: 'DELETE',
+        headers: { 'Authorization': token },
+        success: function() {
+          fetchStudents();
+        },
+        error: function() {
+          alert('Failed to delete student');
+        }
+      });
+    }
+
+    $('#logout').on('click', function() {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    });
+
+    $(document).ready(function() {
+      fetchStudents();
+    });
+  </script>
+</body>
+</html>
